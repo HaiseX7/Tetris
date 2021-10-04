@@ -5,9 +5,13 @@ import numpy as np
 import pygame.font
 from threading import Timer
 
-""" GET RID OF THE TIMER OBJECTS AND REPLACE
-THEM WITH A CLOCK ITERATION THAT DOESNT RELY
-ON A MILLION FLAGS."""
+"""
+1.) define a fall speed and level speed variable
+2.) create a clock object
+3.) create a fall time and level time variable that += clock.get_rawtime
+4.) use 1000 ms as 1 sec in an equation to control the fall interval of the block
+5.) if the block hits something move it up one and stop the block
+"""
 
 class Tetris:
 
