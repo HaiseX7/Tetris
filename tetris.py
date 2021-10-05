@@ -3,15 +3,7 @@ import sys
 import random
 import numpy as np
 import pygame.font
-from threading import Timer
 
-"""
-1.) define a fall speed and level speed variable
-2.) create a clock object
-3.) create a fall time and level time variable that += clock.get_rawtime
-4.) use 1000 ms as 1 sec in an equation to control the fall interval of the block
-5.) if the block hits something move it up one and stop the block
-"""
 
 class Tetris:
 
@@ -33,18 +25,18 @@ class Tetris:
 		self.block_active = False
 		self.block_finish = False
 
-		# Flag for the incremental downward movement clock
-		self.clock_active = False
-
 		# List that stores all the finished blocks
 		# This will be utilized for collision detection
 		self.finished_blocks = []
-
 		self.unaccepted_coordinates = []
 
-		self.label = Label(self.screen)
+		# Settings for the incremental movement
+		self.fall_speed = 0.25
+		self.fall_time = 0
+		self.clock = pygame.time.Clock()
 
-		self.count = 0
+		# instance of the Tetris Label
+		self.label = Label(self.screen)
 
 	def run_game(self):
 		while True:
@@ -53,28 +45,21 @@ class Tetris:
 					sys.exit()
 				elif event.type == pygame.KEYDOWN:
 					self.check_keydown_events(event)
-
-			""" This is the collision detection logic
-			Once there is more than one block collisions can occur
-			Finished blocks are stored in a list and collisions are detected
-			between the new piece and the culmination of all old pieces """
+ 
 			if len(self.blocks) > 1:
 				self.manage_finished_blocks()
-				self.check_collisions(self.finished_blocks_grid)
 				self.check_unaccepted_coords(self.finished_blocks_grid)
+				self.check_row_clear()
 
 			# Creates a block if no block is currently active
 			if not self.block_active:
 				self.create_block()
 
-			# Conditional statement for incrementing block movement
-			if not np.any(self.piece.color_grid[19]) and len(self.blocks) == 1:
-				self.increment_movement()
-			elif np.any(self.piece.color_grid[19]):
-				self.block_active = False
-
 			# Sets the grid equal to the sum of all the blocks
-			self.grid.block_color_list = sum(self.blocks)
+			self.sum_blocks = sum(self.blocks)
+			self.grid.block_color_list = self.sum_blocks
+
+			self.increment_movement()
 
 			self.display_screen()	
 
@@ -84,6 +69,7 @@ class Tetris:
 				self.piece.move_down()
 				if not self.check_valid_space():
 					self.piece.move_up()
+				
 		elif event.key == pygame.K_LEFT:
 			if not np.any(self.piece.color_grid[:, 0]):
 				self.piece.move_left()
@@ -102,6 +88,26 @@ class Tetris:
 			self.finished_blocks.append(self.blocks[x])
 		self.finished_blocks_grid = sum(self.finished_blocks)
 
+	def check_row_clear(self):
+		for y in range(20):
+			arr = self.finished_blocks_grid[y]
+			checked_arr = [np.any(y) for y in arr]
+
+			if np.all(checked_arr):
+				self.clear_row(y)
+
+	def clear_row(self, y):
+		for x in range(10):
+			self.sum_blocks[y, x] = (0, 0, 0)
+		self.adjust_grid()
+
+	def adjust_grid(self):
+		for row in reversed(range(y)):
+			for column in range(10):
+				if np.any(self.piece.color_grid[y][x]):
+					self.sum_blocks[y+1, x] = self.sum_blocks[y, x]
+					self.sum_blocks[y, x] = [0, 0, 0]
+
 	def check_valid_space(self):
 		for y in range(20):
 			for x in range(10):
@@ -112,28 +118,18 @@ class Tetris:
 		return True
 
 	def increment_movement(self):
-		if not self.clock_active and self.block_active:
-			self.t = Timer(1.0, self.piece.move_down)
-			self.t.start()
-			self.clock_active = True
-		if not self.t.is_alive():
-			self.clock_active = False
+		self.clock.tick()
+		self.fall_time += self.clock.get_rawtime()
 
-	def check_collisions(self, finished_blocks_grid):
-		self.check_down_collision(finished_blocks_grid)
-
-	def check_down_collision(self, finished_blocks_grid):
-		for y in reversed(range(20)):
-			for x in range(10):
-				if np.any(self.piece.color_grid[y][x]): 
-					if y < 19:
-						if np.any(finished_blocks_grid[y+1][x]):
-							self.t.cancel()
-							self.block_active = False
-						else:
-							self.increment_movement()
-				else:
-					pass
+		if self.fall_time/1000 > self.fall_speed:
+			if np.any(self.piece.color_grid[19]):
+				self.block_active = False
+			else:
+				self.piece.move_down()
+				self.fall_time = 0
+				if not self.check_valid_space():
+					self.piece.move_up()
+					self.block_active = False
 
 	def check_unaccepted_coords(self, finished_blocks_grid):
 		self.unaccepted_coordinates = []
@@ -157,9 +153,9 @@ class Tetris:
 
 
 class Pieces:
-	""" CREATE THE PIECES AND PASS IT TO PIECE """
+
 	def __init__(self):
-		X = [255, 0, 0]
+		X = (255, 0, 0)
 		y = (0, 0, 255)
 		z = (0, 255, 0)
 		W = (0, 255, 255)
@@ -277,7 +273,8 @@ class Piece:
 
 	def __init__(self):
 		self.pieces = Pieces()
-		self.color_grid = self.pieces.shapes[random.randint(0, len(self.pieces.shapes) - 1)]
+		self.piece_num = random.randint(0, len(self.pieces.shapes) - 1)
+		self.color_grid = self.pieces.shapes[self.piece_num]
 
 	def move_down(self):
 		count = 0
