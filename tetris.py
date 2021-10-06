@@ -31,7 +31,7 @@ class Tetris:
 		self.unaccepted_coordinates = []
 
 		# Settings for the incremental movement
-		self.fall_speed = 0.25
+		self.fall_speed = 0.5      
 		self.fall_time = 0
 		self.clock = pygame.time.Clock()
 
@@ -97,16 +97,18 @@ class Tetris:
 				self.clear_row(y)
 
 	def clear_row(self, y):
-		for x in range(10):
-			self.sum_blocks[y, x] = (0, 0, 0)
-		self.adjust_grid()
+		for block in range(len(self.blocks)):
+			for x in range(10):
+				self.blocks[block][y][x] = (0, 0, 0)
+		self.adjust_grid(y)
 
-	def adjust_grid(self):
-		for row in reversed(range(y)):
-			for column in range(10):
-				if np.any(self.piece.color_grid[y][x]):
-					self.sum_blocks[y+1, x] = self.sum_blocks[y, x]
-					self.sum_blocks[y, x] = [0, 0, 0]
+	def adjust_grid(self, y):
+		for block in range(len(self.blocks)):
+			for row in reversed(range(y)):
+				for column in range(10):
+					if np.any(self.blocks[block][row][column]):
+						self.blocks[block][row+1][column] = self.blocks[block][row, column]
+						self.blocks[block][row][column] = [0, 0, 0]
 
 	def check_valid_space(self):
 		for y in range(20):
@@ -155,11 +157,13 @@ class Tetris:
 class Pieces:
 
 	def __init__(self):
-		X = (255, 0, 0)
-		y = (0, 0, 255)
-		z = (0, 255, 0)
-		W = (0, 255, 255)
-		Q = (255, 255, 0)
+		X = (255, 127, 0) # orange
+		y = (255, 255, 0) # yellow
+		z = (0, 255, 255) # cyan
+		W = (130, 0, 130) # purple
+		Q = (0, 255, 0)   # green
+		B = (25, 25, 255) # blue
+		R = (255, 25, 25)
 		o = (0, 0, 0)
 		self.piece1 = np.array(
 					  [[o, o, o, o, X, X, o, o, o, o],
@@ -266,7 +270,49 @@ class Pieces:
 					   [o, o, o, o, o, o, o, o, o, o],
 					   [o, o, o, o, o, o, o, o, o, o],
 					   [o, o, o, o, o, o, o, o, o, o]])
-		self.shapes = [self.piece1, self.piece2, self.piece3, self.piece4, self.piece5]
+		self.piece6 = np.array(
+					  [[o, o, o, o, B, B, o, o, o, o],
+					   [o, o, o, o, B, o, o, o, o, o],
+					   [o, o, o, o, B, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o]])
+		self.piece7 = np.array(
+					  [[o, o, o, o, R, R, o, o, o, o],
+					   [o, o, o, o, o, R, R, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o],
+					   [o, o, o, o, o, o, o, o, o, o]])
+		self.shapes = [self.piece1, self.piece2, self.piece3, self.piece4, self.piece5, self.piece6, self.piece7]
 
 
 class Piece:
@@ -321,6 +367,22 @@ class Piece:
 						self.color_grid[y-1][x] = self.color_grid[y][x]
 						self.color_grid[y][x] = (0, 0, 0)
 
+	def rotate(self):
+		if piece_num == 2:
+			return 0
+		elif piece_num == 3:
+			self.sixteen_grid_rotation()
+		else:
+			self.nine_grid_rotation()
+
+	def sixteen_grid_rotation(self):
+		pass
+
+	def nine_grid_rotation(self):
+		center = self.find_center()
+
+	def find_center(self):
+		
 
 class Grid:
 
